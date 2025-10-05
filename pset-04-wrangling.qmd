@@ -180,7 +180,7 @@ We see exactly 1,000 rows. We should be seeing over $52 \times 3$ rows per state
 
 ```{r}
 api <- "https://data.cdc.gov/resource/pwn4-m3yp.json"
-cases <- request(paste0(api, "?$limit=100000000")) |>
+cases <- request(paste0(api, "?$limit=10000000000")) |>
   req_perform() |>
   resp_body_string() |>
   fromJSON() |> 
@@ -229,6 +229,7 @@ cases |>
 
 ```{r}
 library(knitr)
+library(lubridate)
 cases |> 
   mutate(date = ymd(date)) |> 
   mutate(
@@ -255,7 +256,7 @@ deaths = request(paste0(deaths_url, "?$limit=100000000")) |>
   req_perform() |> 
   resp_body_string() |> 
   fromJSON() |>
-  tibble() |>
+  as_tibble() |>
   select(state, date = end_date, deaths = covid_19_deaths) |>
   mutate(date = as.Date(date),
          deaths = as.numeric(deaths)) |>

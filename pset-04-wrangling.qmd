@@ -190,19 +190,24 @@ api <- "https://data.cdc.gov/resource/pwn4-m3yp.json"
 cases <- request(paste0(api, "?$limit=100000000")) |>
   req_perform() |>
   resp_body_string() |>
-  fromJSON() |>
-  tibble(
-    date = as.Date(cases$end_date),
-    cases = as.numeric(cases$tot_cases)
+  fromJSON() |> tibble() |>
+  mutate(
+    date = as.Date(end_date),
+    cases = as.numeric(tot_cases)
   ) |> 
-  select(state,date,cases)
+  select(state,date,cases) |>
+  filter(!is.na(cases),!is.na(state),!is.na(date))
 ```
 
 12. For 2020 and 2021, make a time series plot of cases per 100,000 versus time for each state. Stratify the plot by region name. Make sure to label you graph appropriately.
 
 ```{r}
+
+# "NYC" "AS"  "FSM" "GU"  "MP"  "PW"  "RMI" "VI" are not found in population dataset
+
 cases |> 
-  filter(year(date) == 2020 | year(date) == 2021) |> 
+  filter(year(date) == 2020 | year(date) == 2021) |>
+  filter(!(state %in% c("NYC","AS","FSM","GU","MP","PW","RMI","VI" ))) |> 
   left_join(population, by = "state") |>
   mutate(cases_per_100k = cases/pop_size * 100000) |>
   ggplot() + 
@@ -212,12 +217,17 @@ cases |>
     color = state,
     group = state
   )) +
-  facet_wrap(~region_name) + 
+  scale_x_date(
+  date_breaks = "6 months",  
+  date_labels = "%b%y",        
+  expand = c(0.02, 0)
+  ) + 
+  facet_wrap(~region_name, scales = "free_y", ncol = 2) + 
   labs(
     x = "Time",
     y = "Cases per 100K",
-    title = "Case per 100,000 versus time for each state"
-  )
+    title = "Case per 100,000 versus time for each state (2020-2021)"
+  ) + theme_minimal() 
 ```
 
 13. The dates in the `cases` dataset are stored as character strings. Use the **lubridate** package to properly parse the `date` column, then create a summary table showing the total COVID-19 cases by month and year for 2020 and 2021. The table should have columns for year, month (as month name), and total cases across all states. Order by year and month. Use the **knitr** package and `kable()` function to display the results as a formatted table.
@@ -230,8 +240,8 @@ cases |>
     year = year(date),
     month = month(date, label = TRUE),
     day = day(date)) |> 
-  filter(year == 2021 | year == 2022) |>
-  group_by(state,year,month, date) |>
+  filter(year == 2020 | year == 2021 ) |>
+  group_by(year,month) |>
   summarize(total_COVID19_cases = sum(cases)) |>
   kable(digits = 2)
 ```

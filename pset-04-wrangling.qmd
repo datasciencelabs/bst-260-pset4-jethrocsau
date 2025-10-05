@@ -70,6 +70,16 @@ population <- response |>
 ```{r}
 #| message: false
 #| warning: false
+## Use janitor row to names function
+# convert to tibble
+# remove stat column
+# rename state column to state_name
+# use pivot_longer to tidy
+# remove POP_ from year
+# parese all relevant colunns to numeric
+# add state abbreviations using state.abb variable
+# use case_when to add abbreviations for DC and PR
+
 library(tidyverse)
 library(janitor)
 population <- population |>
@@ -90,20 +100,6 @@ population <- population |>
     state_name == "Puerto Rico" ~ "PR",
     .default = state.abb[match(state_name,state.name)])
     )
-  
-
-print(population)
-
-  
-  ## Use janitor row to names function
-  # convert to tibble
-  # remove stat column
-  # rename state column to state_name
-  # use pivot_longer to tidy
-  # remove POP_ from year
-  # parese all relevant colunns to numeric
-  # add state abbreviations using state.abb variable
-  # use case_when to add abbreviations for DC and PR
 ```
 
 7.  As a check, make a barplot of states' 2021 and 2022 populations. Show the state names in the y-axis ordered by population size. Hint: You will need to use `reorder` and use `facet_wrap`.
@@ -111,18 +107,15 @@ print(population)
 ```{r}
 population |> 
   ggplot() + 
-  geom_col(aes(x = reorder(state_name, pop_size), y = pop_size)) + 
+  geom_col(aes(
+    x = reorder(state_name, pop_size), 
+    y = pop_size)) + 
   coord_flip() +
   facet_wrap(~year) + 
   labs(
     x = "Population Size",
     y = "State Name"
   )
-  # reorder state
-  # assign aesthetic mapping
-  # use geom_col to plot barplot
-  # flip coordinates
-  # facet by year
 ```
 
 8.  The following URL:
@@ -190,7 +183,8 @@ api <- "https://data.cdc.gov/resource/pwn4-m3yp.json"
 cases <- request(paste0(api, "?$limit=100000000")) |>
   req_perform() |>
   resp_body_string() |>
-  fromJSON() |> tibble() |>
+  fromJSON() |> 
+  as_tibble() |>
   mutate(
     date = as.Date(end_date),
     cases = as.numeric(tot_cases)
@@ -208,7 +202,8 @@ cases <- request(paste0(api, "?$limit=100000000")) |>
 cases |> 
   filter(year(date) == 2020 | year(date) == 2021) |>
   filter(!(state %in% c("NYC","AS","FSM","GU","MP","PW","RMI","VI" ))) |> 
-  left_join(population, by = "state") |>
+  mutate(year = year(date)) |> 
+  left_join(population, by = c("state","year")) |>
   mutate(cases_per_100k = cases/pop_size * 100000) |>
   ggplot() + 
   geom_line(aes(

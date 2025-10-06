@@ -39,8 +39,10 @@ Create an object called `request` of class `httr2_request` with this URL as an e
 #| message: false
 #| warning: false
 library(httr2)
-request_url = paste("https://api.census.gov/data/2021/pep/population?get=POP_2020,POP_2021,NAME&for=state:*&key=", census_key, sep = "")
-request <- request(request_url) 
+request <- request(url) |> 
+  req_url_query(get = "POP_2020,POP_2021,NAME",
+                `for`="state:*", 
+                key = census_key)
 ```
 
 3.  Make a request to the US Census API using the `request` object. Save the response to and object named `response`. Check the response status of your request and make sure it was successful. You can learn about *status codes* [here](https://en.wikipedia.org/wiki/List_of_HTTP_status_codes).
@@ -113,8 +115,8 @@ population |>
   coord_flip() +
   facet_wrap(~year) + 
   labs(
-    x = "Population Size",
-    y = "State Name"
+    x = "State Name",
+    y = "Population Size"
   )
 ```
 
@@ -180,7 +182,8 @@ We see exactly 1,000 rows. We should be seeing over $52 \times 3$ rows per state
 
 ```{r}
 api <- "https://data.cdc.gov/resource/pwn4-m3yp.json"
-cases <- request(paste0(api, "?$limit=10000000000")) |>
+cases <- request(api) |>
+  req_url_query(`$limit` = 10000000000) |>
   req_perform() |>
   resp_body_string() |>
   fromJSON() |> 
@@ -189,14 +192,14 @@ cases <- request(paste0(api, "?$limit=10000000000")) |>
     date = as.Date(end_date),
     cases = as.numeric(tot_cases)
   ) |> 
-  select(state,date,cases) |>
+  select(state,date,cases) |> 
   filter(!is.na(cases),!is.na(state),!is.na(date))
 ```
 
 12. For 2020 and 2021, make a time series plot of cases per 100,000 versus time for each state. Stratify the plot by region name. Make sure to label you graph appropriately.
 
 ```{r}
-
+library(lubridate)
 # "NYC" "AS"  "FSM" "GU"  "MP"  "PW"  "RMI" "VI" are not found in population dataset
 
 cases |> 
@@ -222,14 +225,14 @@ cases |>
     x = "Time",
     y = "Cases per 100K",
     title = "Case per 100,000 versus time for each state (2020-2021)"
-  ) + theme_minimal() 
+  ) + theme_minimal() +
+  theme(legend.text = element_text(size = 6))
 ```
 
 13. The dates in the `cases` dataset are stored as character strings. Use the **lubridate** package to properly parse the `date` column, then create a summary table showing the total COVID-19 cases by month and year for 2020 and 2021. The table should have columns for year, month (as month name), and total cases across all states. Order by year and month. Use the **knitr** package and `kable()` function to display the results as a formatted table.
 
 ```{r}
 library(knitr)
-library(lubridate)
 cases |> 
   mutate(date = ymd(date)) |> 
   mutate(
@@ -252,7 +255,8 @@ Use **httr2** to download COVID-19 death data from this endpoint. Make sure to r
 
 ```{r}
 # Your code here
-deaths = request(paste0(deaths_url, "?$limit=100000000")) |>
+deaths = request(deaths_url) |>
+  req_url_query(`$limit` = 10000000000) |>
   req_perform() |> 
   resp_body_string() |> 
   fromJSON() |>
@@ -284,5 +288,6 @@ deaths |>
     y = "Total COVID-19 Deaths",
     title = "Total COVID-19 Deaths by State"
   ) + 
-  theme_classic()
+  theme_classic() +
+  theme(axis.text.x = element_text(size = 6))
 ```
